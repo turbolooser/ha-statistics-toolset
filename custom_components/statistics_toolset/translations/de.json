@@ -1,0 +1,235 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA Statistics Toolset",
+        "description": "Hier ist nichts einzurichten. Danach über \"Konfigurieren\" festlegen, ob Reparaturen geschrieben werden dürfen und welche Zähler beschreibbar sind."
+      }
+    },
+    "abort": {
+      "already_configured": "HA Statistics Toolset ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Schreibschutz",
+        "description": "Der Simulationsmodus sperrt jedes Schreiben: Erkennen, Simulieren, Sichern und Auflisten funktionieren weiter, Reparieren und Wiederherstellen verweigern. Die Freigabeliste schränkt zusätzlich ein — sind Einträge vorhanden, sind nur diese Zähler schreib- und löschbar, alles andere wird auch bei ausgeschaltetem Simulationsmodus abgewiesen. Leer lassen, um alle Zähler zuzulassen.",
+        "data": {
+          "read_only": "Simulationsmodus (es wird nichts geschrieben)",
+          "write_allowlist": "Beschreibbare Zähler (leer = alle)",
+          "admin_only": "Panel nur für Admins sichtbar"
+        },
+        "data_description": {
+          "read_only": "Zum Ausprobieren empfohlen. Erst nach einem vollständigen Home-Assistant-Backup abschalten.",
+          "write_allowlist": "Die Zähler auswählen, die wirklich verändert werden sollen, z. B. Testzähler.",
+          "admin_only": "Aus zeigt das Sidebar-Panel jedem User, nicht nur Admins. Die Dienste selbst bleiben davon unabhängig durch Simulationsmodus und Freigabeliste geschützt."
+        }
+      }
+    }
+  },
+  "services": {
+    "backup": {
+      "name": "Backup erstellen (vollständige Historie)",
+      "description": "Schreibt eine mit Zeitstempel versehene JSON-Sicherung der kompletten Zählerstatistik samt Metadaten. Ändert die Statistik nicht und ist jederzeit wiederholbar — die Sicherungen eines Zählers sind die Stände, auf die zurückgesprungen werden kann.",
+      "fields": {
+        "statistic_id": {
+          "name": "Zähler",
+          "description": "Der zu sichernde Zähler."
+        }
+      }
+    },
+    "detect": {
+      "name": "Erkennen (Quelle, Zyklus, Zeitraum)",
+      "description": "Schlägt Quelle, Zyklus und Zeitraum für einen Zähler automatisch vor. Nur lesen.",
+      "fields": {
+        "statistic_id": {
+          "name": "Zähler",
+          "description": "Der zu untersuchende Zähler."
+        }
+      }
+    },
+    "fix": {
+      "name": "Reparieren (SCHREIBT DATEN — vorher sichern!)",
+      "description": "⚠️ Überschreibt die Zählerstatistik. SCHREIBT in die Statistik-Datenbank und kann zu Datenverlust führen. Zuerst ein vollständiges Home-Assistant-Backup anlegen, Simulieren ausführen, die Zahlen prüfen, dann mit confirm: true aufrufen. Vorher wird automatisch eine JSON-Sicherung angelegt. Im Read-only-Modus deaktiviert.",
+      "fields": {
+        "statistic_id": {
+          "name": "Zu reparierender Zähler",
+          "description": "Der utility_meter/Zähler-Sensor, dessen Statistik falsch aussieht."
+        },
+        "reference_id": {
+          "name": "Quelle (optional)",
+          "description": "Sensor, aus dem der Zähler abgeleitet wird (Wahrheitsquelle). Leer lassen für den Selbst-Modus: der Zähler ist seine eigene Quelle, es werden nur seine Ausreißer geglättet. Wird automatisch erkannt."
+        },
+        "cycle": {
+          "name": "Zyklustyp",
+          "description": "Die Reset-Regel des Zählers. Wird automatisch aus der utility_meter-Konfiguration gelesen; 'none' ist ein permanenter Zähler ohne Reset."
+        },
+        "start": {
+          "name": "Bereichsstart",
+          "description": "Erster Zeitpunkt des zu reparierenden Bereichs — zugleich der Nullpunkt der Summe."
+        },
+        "end": {
+          "name": "Bereichsende",
+          "description": "Letzter Zeitpunkt des zu reparierenden Bereichs."
+        },
+        "confirm": {
+          "name": "Ich habe ein Backup und die Vorschau geprüft",
+          "description": "Muss true sein, sonst wird nicht geschrieben."
+        }
+      }
+    },
+    "list_backups": {
+      "name": "Backups auflisten",
+      "description": "Listet die vorhandenen Sicherungen mit Zeitpunkt, abgedecktem Zeitraum, Punktzahl und Endsumme, neueste zuerst. Nur lesend.",
+      "fields": {
+        "statistic_id": {
+          "name": "Zähler (optional)",
+          "description": "Liste auf einen Zähler einschränken. Leer lassen, um alle Sicherungen zu sehen."
+        }
+      }
+    },
+    "restore": {
+      "name": "Wiederherstellen aus Backup (SCHREIBT)",
+      "description": "Setzt einen Zähler auf den Stand einer Sicherung zurück. SCHREIBT in die Statistik-Datenbank. Eine vollständige Sicherung (ab v0.7) wird exakt wiederhergestellt: die Statistik des Zählers wird geleert und aus der Datei neu aufgebaut, damit auch Punkte verschwinden, die eine Reparatur außerhalb des ursprünglichen Zeitraums angelegt hat. Vorher wird der Ist-Zustand automatisch als 'pre-restore' gesichert, danach werden Punktzahl und Endsumme geprüft. Im Read-only-Modus deaktiviert.",
+      "fields": {
+        "backup_file": {
+          "name": "Backup-Datei",
+          "description": "Pfad zur JSON-Sicherung, absolut oder relativ zum Ordner statistics_toolset_backups."
+        },
+        "confirm": {
+          "name": "Wiederherstellung bestätigen",
+          "description": "Muss true sein."
+        }
+      }
+    },
+    "set_config": {
+      "name": "Konfiguration setzen",
+      "description": "Ändert die Schreibsperren: Simulationsmodus und/oder die Liste der beschreibbaren Zähler. Nur die übergebenen Felder werden geändert, der Rest bleibt wie er ist. Wird im Config-Entry gespeichert, übersteht also einen Neustart, und wirkt sofort.",
+      "fields": {
+        "read_only": {
+          "name": "Simulationsmodus",
+          "description": "true sperrt jedes Schreiben (Reparieren/Wiederherstellen verweigern); false aktiviert Schreiben, eingeschränkt durch write_allowlist, falls gesetzt."
+        },
+        "write_allowlist": {
+          "name": "Beschreibbare Zähler",
+          "description": "Nur diese statistic_ids sind schreib- und löschbar. Leere Liste senden, um die Einschränkung aufzuheben."
+        },
+        "admin_only": {
+          "name": "Panel nur für Admins sichtbar",
+          "description": "true (Standard) versteckt das Sidebar-Panel vor Nicht-Admins; false zeigt es allen. Betrifft nicht, wer schreiben darf — das regeln weiter Simulationsmodus und Freigabeliste."
+        }
+      }
+    },
+    "simulate": {
+      "name": "Simulieren (Vorschau, nur lesen)",
+      "description": "Analysiert einen Zähler und zeigt die vorgeschlagene Korrektur als Vorschau — schreibt nichts. Immer zuerst ausführen und prüfen, bevor Reparieren genutzt wird.",
+      "fields": {
+        "statistic_id": {
+          "name": "Zu reparierender Zähler",
+          "description": "Der utility_meter/Zähler-Sensor, dessen Statistik falsch aussieht."
+        },
+        "reference_id": {
+          "name": "Quelle (optional)",
+          "description": "Sensor, aus dem der Zähler abgeleitet wird (Wahrheitsquelle). Leer lassen für den Selbst-Modus: der Zähler ist seine eigene Quelle, es werden nur seine Ausreißer geglättet. Wird automatisch erkannt."
+        },
+        "cycle": {
+          "name": "Zyklustyp",
+          "description": "Die Reset-Regel des Zählers. Wird automatisch aus der utility_meter-Konfiguration gelesen; 'none' ist ein permanenter Zähler ohne Reset."
+        },
+        "start": {
+          "name": "Bereichsstart",
+          "description": "Erster Zeitpunkt des zu reparierenden Bereichs — zugleich der Nullpunkt der Summe."
+        },
+        "end": {
+          "name": "Bereichsende",
+          "description": "Letzter Zeitpunkt des zu reparierenden Bereichs."
+        }
+      }
+    },
+    "status": {
+      "name": "Status",
+      "description": "Meldet, welche Schreibsperren gelten, wo Sicherungen liegen und wie viele es gibt. Nur lesend."
+    },
+    "transfer": {
+      "name": "Statistik auf anderen Zähler übertragen (SCHREIBT)",
+      "description": "Verschiebt die komplette Statistik-Historie eines Zählers auf eine andere statistic_id — für den häufigen Fall einer umbenannten Entity, deren alte Historie sonst verwaist unter der alten ID läge, während die neue bei null anfängt. SCHREIBT in die Statistik-Datenbank. Verweigert, wenn das Ziel bereits Statistik hat (nur Verschieben, nie Zusammenführen). Vom Quell-Zähler wird vorher automatisch eine Sicherung angelegt. Deaktiviert im Simulationsmodus.",
+      "fields": {
+        "from_statistic_id": {
+          "name": "Von (alte statistic_id)",
+          "description": "Die verwaiste statistic_id, von der die Historie wegverschoben wird — hat oft keine lebende Entity mehr, deshalb als Text statt als Auswahl."
+        },
+        "to_statistic_id": {
+          "name": "Nach (aktuelle Entity)",
+          "description": "Die Entity, die die Historie ab jetzt trägt. Darf noch keine eigene Statistik haben."
+        },
+        "confirm": {
+          "name": "Übertragung bestätigen",
+          "description": "Muss true sein."
+        }
+      }
+    }
+  },
+  "selector": {
+    "cycle": {
+      "options": {
+        "yearly": "Jährlich (1. Januar)",
+        "quarterly": "Vierteljährlich (Jan/Apr/Jul/Okt)",
+        "bimonthly": "Zweimonatlich (Jan/Mär/Mai/…)",
+        "monthly": "Monatlich (Monatserster)",
+        "weekly": "Wöchentlich (Montag)",
+        "daily": "Täglich (Mitternacht)",
+        "hourly": "Stündlich (Minute 0)",
+        "quarter-hourly": "Viertelstündlich (0/15/30/45)",
+        "none": "Gesamtzähler — läuft ohne Reset weiter (API-Wert: none)"
+      }
+    }
+  },
+  "exceptions": {
+    "backup_corrupt": {
+      "message": "Die Sicherung {file} hat eine falsche Prüfsumme — die Datei ist beschädigt und wurde nicht wiederhergestellt."
+    },
+    "backup_incomplete": {
+      "message": "In der Sicherung {file} fehlt statistic_id oder die Einheit."
+    },
+    "backup_no_rows": {
+      "message": "Die Sicherung {file} enthält keine wiederherstellbaren Werte."
+    },
+    "backup_not_usable": {
+      "message": "Schreiben verweigert: die Sicherung {file} könnte diesen Zähler nicht wiederherstellen ({problem}). Es wurde nichts geändert."
+    },
+    "confirm_required_fix": {
+      "message": "Schreiben verweigert: 'confirm: true' setzen, nachdem die Simulation geprüft wurde."
+    },
+    "confirm_required_restore": {
+      "message": "Schreiben verweigert: zum Wiederherstellen 'confirm: true' setzen."
+    },
+    "confirm_required_transfer": {
+      "message": "Schreiben verweigert: zum Übertragen 'confirm: true' setzen."
+    },
+    "not_in_allowlist": {
+      "message": "Schreiben von {statistic_id} verweigert: nicht in WRITE_ALLOWLIST enthalten (erlaubt: {allowlist}). In const.py ergänzen oder die Liste leeren."
+    },
+    "read_only_mode": {
+      "message": "Schreiben ist deaktiviert: HA Statistics Toolset ist im Read-only-/Simulationsmodus. Zum Freischalten READ_ONLY_MODE = False in const.py setzen."
+    },
+    "restore_verification_failed": {
+      "message": "Die Wiederherstellung von {statistic_id} ließ sich nicht bestätigen: erwartet {expected} Punkte, gefunden {actual}. Der vorherige Stand wurde als {safety_net} gesichert."
+    },
+    "source_no_data": {
+      "message": "Quelle {source} hat zwischen {start} und {end} keine kumulativen Daten. Daten sind ab {available} vorhanden."
+    },
+    "source_no_statistics": {
+      "message": "Quelle {source} hat überhaupt keine Langzeitstatistik und kann daher nicht als Referenz dienen. Quelle leer lassen, um den Selbst-Modus zu nutzen."
+    },
+    "transfer_source_empty": {
+      "message": "{statistic_id} hat keine Statistik zum Übertragen."
+    },
+    "transfer_target_not_empty": {
+      "message": "Übertragung verweigert: {statistic_id} hat bereits Statistik. Die Übertragung verschiebt nur auf ein leeres Ziel, sie führt nie zusammen."
+    },
+    "transfer_verification_failed": {
+      "message": "Die Übertragung nach {statistic_id} ließ sich nicht bestätigen: erwartet {expected} Punkte, gefunden {actual}. Die Daten der Quelle wurden vor dem Löschen als {safety_net} gesichert."
+    }
+  }
+}

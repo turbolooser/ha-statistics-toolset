@@ -1,0 +1,21 @@
+{
+  "domain": "statistics_toolset",
+  "name": "HA Statistics Toolset",
+  "codeowners": [
+    "@turbolooser"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "recorder",
+    "http",
+    "frontend",
+    "panel_custom"
+  ],
+  "documentation": "https://github.com/turbolooser/ha-statistics-toolset",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/turbolooser/ha-statistics-toolset/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.18.4"
+}

@@ -1,0 +1,154 @@
+# Structure only — every name and description lives in strings.json / translations/*.json,
+# so Home Assistant shows the user's own language instead of two languages at once.
+
+detect:
+  fields:
+    statistic_id:
+      required: true
+      example: sensor.house_energy_monthly
+      selector:
+        entity:
+          domain: sensor
+
+simulate:
+  fields:
+    statistic_id:
+      required: true
+      example: sensor.house_energy_monthly
+      selector:
+        entity:
+          domain: sensor
+    reference_id:
+      required: false
+      example: sensor.house_energy_total
+      selector:
+        entity:
+          domain: sensor
+    cycle:
+      required: true
+      selector:
+        select:
+          translation_key: cycle
+          options:
+            - yearly
+            - quarterly
+            - bimonthly
+            - monthly
+            - weekly
+            - daily
+            - hourly
+            - quarter-hourly
+            - none
+    start:
+      required: true
+      selector:
+        datetime:
+    end:
+      required: true
+      selector:
+        datetime:
+
+backup:
+  fields:
+    statistic_id:
+      required: true
+      selector:
+        entity:
+          domain: sensor
+
+status:
+
+set_config:
+  fields:
+    read_only:
+      required: false
+      selector:
+        boolean:
+    write_allowlist:
+      required: false
+      selector:
+        entity:
+          domain: sensor
+          multiple: true
+    admin_only:
+      required: false
+      selector:
+        boolean:
+
+list_backups:
+  fields:
+    statistic_id:
+      required: false
+      selector:
+        entity:
+          domain: sensor
+
+fix:
+  fields:
+    statistic_id:
+      required: true
+      selector:
+        entity:
+          domain: sensor
+    reference_id:
+      required: false
+      selector:
+        entity:
+          domain: sensor
+    cycle:
+      required: true
+      selector:
+        select:
+          translation_key: cycle
+          options:
+            - yearly
+            - quarterly
+            - bimonthly
+            - monthly
+            - weekly
+            - daily
+            - hourly
+            - quarter-hourly
+            - none
+    start:
+      required: true
+      selector:
+        datetime:
+    end:
+      required: true
+      selector:
+        datetime:
+    confirm:
+      required: true
+      selector:
+        boolean:
+
+restore:
+  fields:
+    backup_file:
+      required: true
+      example: sensor.house_energy_monthly.20260730_120000.backup.json
+      selector:
+        text:
+    confirm:
+      required: true
+      selector:
+        boolean:
+
+transfer:
+  fields:
+    from_statistic_id:
+      required: true
+      example: sensor.old_entity_name_energy
+      selector:
+        text:
+    to_statistic_id:
+      required: true
+      example: sensor.new_entity_name_energy
+      selector:
+        entity:
+          domain: sensor
+    confirm:
+      required: true
+      selector:
+        boolean:

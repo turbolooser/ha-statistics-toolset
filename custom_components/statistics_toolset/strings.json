@@ -1,0 +1,235 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA Statistics Toolset",
+        "description": "Nothing to set up here. Afterwards use \"Configure\" to choose whether repairs may be written and which counters are writable."
+      }
+    },
+    "abort": {
+      "already_configured": "HA Statistics Toolset is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Write protection",
+        "description": "Simulation mode blocks every write: detect, simulate, backup and list_backups keep working, fix and restore refuse. The allowlist narrows writing further — with entries, only those counters can be written or cleared, everything else is refused even with simulation mode off. Leave it empty to allow every counter.",
+        "data": {
+          "read_only": "Simulation mode (nothing is written)",
+          "write_allowlist": "Writable counters (empty = all)",
+          "admin_only": "Panel visible to admins only"
+        },
+        "data_description": {
+          "read_only": "Recommended while trying things out. Turn it off only after a full Home Assistant backup.",
+          "write_allowlist": "Pick the counters you actually intend to change, e.g. test counters.",
+          "admin_only": "Off lets every user see the sidebar panel, not just admins. The services themselves stay protected by simulation mode and the write allowlist either way."
+        }
+      }
+    }
+  },
+  "services": {
+    "backup": {
+      "name": "Create backup (full history)",
+      "description": "Writes a timestamped JSON snapshot of the counter's complete statistics, including its metadata. Never modifies statistics and can be repeated any time — the snapshots of a counter are the states you can jump back to.",
+      "fields": {
+        "statistic_id": {
+          "name": "Counter",
+          "description": "The counter to snapshot."
+        }
+      }
+    },
+    "detect": {
+      "name": "Detect (source, cycle, range)",
+      "description": "Suggests source, cycle and range for a counter automatically. Read-only.",
+      "fields": {
+        "statistic_id": {
+          "name": "Counter",
+          "description": "The counter to inspect."
+        }
+      }
+    },
+    "fix": {
+      "name": "Fix (WRITES DATA — back up first!)",
+      "description": "⚠️ Rewrites the counter's statistics. WRITES to the statistics database and can cause data loss. Take a full Home Assistant backup first, run Simulate, review the numbers, then call with confirm: true. A JSON snapshot is written automatically beforehand. Disabled while in read-only mode.",
+      "fields": {
+        "statistic_id": {
+          "name": "Counter to repair",
+          "description": "The utility_meter / counter sensor whose statistics look wrong."
+        },
+        "reference_id": {
+          "name": "Source (optional)",
+          "description": "The sensor the counter is derived from (source of truth). Leave empty for self mode: the counter is its own source and only its outliers are smoothed. Detected automatically."
+        },
+        "cycle": {
+          "name": "Cycle type",
+          "description": "The counter's reset rule. Read automatically from the utility_meter configuration; 'none' is a permanent counter that never resets."
+        },
+        "start": {
+          "name": "Range start",
+          "description": "First moment of the range to rebuild — also the cumulative zero point."
+        },
+        "end": {
+          "name": "Range end",
+          "description": "Last moment of the range to rebuild."
+        },
+        "confirm": {
+          "name": "I have a backup and reviewed the preview",
+          "description": "Must be true, otherwise nothing is written."
+        }
+      }
+    },
+    "list_backups": {
+      "name": "List backups",
+      "description": "Lists the available snapshots with time, covered period, point count and end sum, newest first. Read-only.",
+      "fields": {
+        "statistic_id": {
+          "name": "Counter (optional)",
+          "description": "Limit the list to one counter. Leave empty to list all snapshots."
+        }
+      }
+    },
+    "restore": {
+      "name": "Restore from backup (WRITES)",
+      "description": "Puts a counter back to the state a snapshot holds. WRITES to the statistics database. A full snapshot (v0.7+) is restored exactly: the counter's statistics are cleared and rebuilt from the file, so points a repair added outside the original range are removed too. Before that, the current state is snapshotted automatically as 'pre-restore', and afterwards point count and end sum are verified. Disabled while in read-only mode.",
+      "fields": {
+        "backup_file": {
+          "name": "Backup file",
+          "description": "Path to the JSON backup, absolute or relative to the statistics_toolset_backups folder."
+        },
+        "confirm": {
+          "name": "Confirm restore",
+          "description": "Must be true."
+        }
+      }
+    },
+    "set_config": {
+      "name": "Set configuration",
+      "description": "Changes the write locks: simulation mode and/or the list of counters allowed to be written. Only the fields you provide are changed; the rest stay as they are. Persists to the config entry, so it survives a restart, and takes effect immediately.",
+      "fields": {
+        "read_only": {
+          "name": "Simulation mode",
+          "description": "true blocks every write (fix/restore refuse); false enables writing, narrowed by write_allowlist if it is set."
+        },
+        "write_allowlist": {
+          "name": "Writable counters",
+          "description": "Only these statistic_ids can be written or cleared. Send an empty list to remove the restriction."
+        },
+        "admin_only": {
+          "name": "Panel visible to admins only",
+          "description": "true (default) hides the sidebar panel from non-admin users; false shows it to everyone. Does not affect who can write — that is still simulation mode and the write allowlist."
+        }
+      }
+    },
+    "simulate": {
+      "name": "Simulate (preview, read-only)",
+      "description": "Analyses a counter and previews the proposed correction — writes nothing. Always run and review this before using Fix.",
+      "fields": {
+        "statistic_id": {
+          "name": "Counter to repair",
+          "description": "The utility_meter / counter sensor whose statistics look wrong."
+        },
+        "reference_id": {
+          "name": "Source (optional)",
+          "description": "The sensor the counter is derived from (source of truth). Leave empty for self mode: the counter is its own source and only its outliers are smoothed. Detected automatically."
+        },
+        "cycle": {
+          "name": "Cycle type",
+          "description": "The counter's reset rule. Read automatically from the utility_meter configuration; 'none' is a permanent counter that never resets."
+        },
+        "start": {
+          "name": "Range start",
+          "description": "First moment of the range to rebuild — also the cumulative zero point."
+        },
+        "end": {
+          "name": "Range end",
+          "description": "Last moment of the range to rebuild."
+        }
+      }
+    },
+    "status": {
+      "name": "Status",
+      "description": "Reports which write locks are in force, where backups are stored and how many exist. Read-only."
+    },
+    "transfer": {
+      "name": "Transfer statistics to another entity (WRITES)",
+      "description": "Moves a counter's whole statistics history onto a different statistic_id — for the common case of a renamed entity, whose old history would otherwise sit orphaned under the old id while the new one starts at zero. WRITES to the statistics database. Refuses if the target already has any statistics (a move, never a merge). A snapshot of the source is taken automatically before it is cleared. Disabled while in read-only mode.",
+      "fields": {
+        "from_statistic_id": {
+          "name": "From (old statistic_id)",
+          "description": "The orphaned statistic_id to move the history away from — often has no live entity anymore, so it is entered as text rather than picked from a list."
+        },
+        "to_statistic_id": {
+          "name": "To (current entity)",
+          "description": "The entity that should carry the history from now on. Must not have any statistics of its own yet."
+        },
+        "confirm": {
+          "name": "Confirm transfer",
+          "description": "Must be true."
+        }
+      }
+    }
+  },
+  "selector": {
+    "cycle": {
+      "options": {
+        "yearly": "Yearly (Jan 1)",
+        "quarterly": "Quarterly (Jan/Apr/Jul/Oct)",
+        "bimonthly": "Bimonthly (Jan/Mar/May/…)",
+        "monthly": "Monthly (1st of month)",
+        "weekly": "Weekly (Monday)",
+        "daily": "Daily (midnight)",
+        "hourly": "Hourly (minute 0)",
+        "quarter-hourly": "Quarter-hourly (0/15/30/45)",
+        "none": "Running total — a counter without any reset (API value: none)"
+      }
+    }
+  },
+  "exceptions": {
+    "backup_corrupt": {
+      "message": "Backup {file} fails its checksum — the file is damaged and was not restored."
+    },
+    "backup_incomplete": {
+      "message": "Backup {file} is missing the statistic_id or unit."
+    },
+    "backup_no_rows": {
+      "message": "Backup {file} contains no restorable rows."
+    },
+    "backup_not_usable": {
+      "message": "Refusing to write: the snapshot {file} would not be able to restore this counter ({problem}). Nothing was changed."
+    },
+    "confirm_required_fix": {
+      "message": "Refusing to write: set 'confirm: true' after reviewing the simulation."
+    },
+    "confirm_required_restore": {
+      "message": "Refusing to write: set 'confirm: true' to restore."
+    },
+    "confirm_required_transfer": {
+      "message": "Refusing to write: set 'confirm: true' to transfer."
+    },
+    "not_in_allowlist": {
+      "message": "Refusing to write {statistic_id}: it is not in WRITE_ALLOWLIST (allowed: {allowlist}). Add it in const.py or clear the allowlist."
+    },
+    "read_only_mode": {
+      "message": "Writing is disabled: HA Statistics Toolset is in read-only/simulation mode. Set READ_ONLY_MODE = False in const.py to enable it."
+    },
+    "restore_verification_failed": {
+      "message": "Restore of {statistic_id} could not be verified: expected {expected} points, found {actual}. The previous state was saved as {safety_net}."
+    },
+    "source_no_data": {
+      "message": "Source {source} has no cumulative data between {start} and {end}. Data is available from {available}."
+    },
+    "source_no_statistics": {
+      "message": "Source {source} has no long-term statistics at all, so it cannot be used as a reference. Leave the source empty to use self mode."
+    },
+    "transfer_source_empty": {
+      "message": "{statistic_id} has no statistics to transfer."
+    },
+    "transfer_target_not_empty": {
+      "message": "Refusing to transfer: {statistic_id} already has statistics. Transfer only moves onto an empty target, it never merges."
+    },
+    "transfer_verification_failed": {
+      "message": "Transfer to {statistic_id} could not be verified: expected {expected} points, found {actual}. The source's data was saved as {safety_net} before it was cleared."
+    }
+  }
+}

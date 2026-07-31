@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Test / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Runtime backups the toolset writes (never commit user data)
+*.backup.json
+backups/
+
+# Ausgaben von scripts/live_check.py enthalten Entity-IDs der Instanz
+*.log
+
+# Laufzeit-Logs (können Entity-IDs der Instanz enthalten)
+logs/
+
+# Lokales MCP-Setup (Playwright-Browser fürs Panel-Testing) — Pfade/Setup sind
+# LXC-spezifisch, nicht Teil der Integration
+.mcp.json
+
+# Playwright-Snapshots/Konsolen-Logs vom Live-Testing — enthalten echte
+# Dashboard-Inhalte der Instanz
+.playwright-mcp/

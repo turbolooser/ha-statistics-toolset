@@ -1,0 +1,41 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration
+          # 'brands' only applies to integrations shipped in the default HACS/brands
+          # repository; a custom repository is not (yet) listed there.
+          ignore: brands
+
+  engine-tests:
+    name: Engine unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # pyyaml: translation tests read services.yaml; pyflakes: catches undefined names
+      # (missing imports) that only fail at runtime on a real Home Assistant instance;
+      # voluptuous: the config-service tests load __init__.py for real, schemas included
+      - run: pip install pytest pyyaml pyflakes voluptuous
+      - run: pytest tests/ -q

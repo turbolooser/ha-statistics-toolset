@@ -457,7 +457,14 @@ async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 
 async def async_unload_entry(hass: HomeAssistant, _entry: ConfigEntry) -> bool:
-    """Fall back to the safe defaults; the services stay registered."""
+    """Fall back to the safe defaults; the services stay registered.
+
+    Also runs before a permanent removal (HA always unloads before removing), so the panel
+    is deliberately kept here rather than removed — a *reload* (e.g. from an options change)
+    unloads and immediately sets up again, and removing the panel here would make it flash
+    off and back on. The permanent case is handled separately in ``async_remove_entry``,
+    which only fires when the entry is actually being deleted, not reloaded.
+    """
     hass.data.setdefault(DOMAIN, {}).update({
         "read_only": READ_ONLY_MODE,
         "write_allowlist": tuple(WRITE_ALLOWLIST),
@@ -466,3 +473,22 @@ async def async_unload_entry(hass: HomeAssistant, _entry: ConfigEntry) -> bool:
     })
     await _async_register_panel(hass, ADMIN_ONLY_MODE)
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, _entry: ConfigEntry) -> None:
+    """Deregister the sidebar panel when the integration is actually removed.
+
+    ``panel_custom`` panels live only in memory, never in ``.storage`` — unlike
+    ``async_unload_entry`` (also called on every reload), this only fires once, right before
+    the entry is gone for good. Without it the panel is orphaned in the running process: it
+    keeps showing in the sidebar and in ``frontend/get_panels`` even though the integration's
+    files and config entry are both gone, until Home Assistant is restarted. Best-effort,
+    same as registration — removal must never raise and block the entry from going away.
+    """
+    try:
+        from homeassistant.components import frontend
+
+        if frontend.async_panel_exists(hass, DOMAIN):
+            frontend.async_remove_panel(hass, DOMAIN, warn_if_unknown=False)
+    except Exception:  # noqa: BLE001 - must never block the entry removal itself
+        _LOGGER.exception("statistics_toolset: could not remove sidebar panel")

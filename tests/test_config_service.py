@@ -209,6 +209,29 @@ def test_unload_entry_falls_back_to_admin_only_panel(loaded) -> None:
     asyncio.run(scenario())
 
 
+def test_remove_entry_deregisters_the_panel(loaded) -> None:
+    """Live bug: panel_custom panels live only in memory. async_unload_entry alone (also
+    called on every reload) deliberately leaves the panel registered with safe defaults —
+    but on an actual removal nothing ever calls setup again, so the panel used to stay
+    orphaned in the sidebar until Home Assistant was restarted, even with the integration's
+    files and config entry both gone. async_remove_entry must deregister it for good."""
+    init_module, io, fake = loaded
+
+    async def scenario():
+        await init_module.async_setup(fake.hass, {})
+        await fake.hass.services.async_call(DOMAIN, "set_config", {})  # creates the entry
+        assert DOMAIN in fake.hass.panels.panels
+
+        entry = fake.hass.config_entries.async_entries(DOMAIN)[0]
+        await init_module.async_unload_entry(fake.hass, entry)
+        assert DOMAIN in fake.hass.panels.panels, "unload alone must not remove it (reload case)"
+
+        await init_module.async_remove_entry(fake.hass, entry)
+        assert DOMAIN not in fake.hass.panels.panels
+
+    asyncio.run(scenario())
+
+
 def test_set_config_can_clear_the_allowlist_with_an_empty_list(loaded) -> None:
     """Sending an empty list must remove the restriction, distinct from omitting the field."""
     init_module, io, fake = loaded

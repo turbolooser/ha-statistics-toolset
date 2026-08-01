@@ -12,6 +12,16 @@ sieht HACS ein Update.
 
 ## [Unreleased]
 
+## [0.18.6] — 2026-08-01
+
+### Fixed
+- Nach dem Deinstallieren blieb das Sidebar-Panel als Geisterleiche im laufenden Prozess
+  hängen, bis Home Assistant neu gestartet wurde — obwohl Dateien und Config-Entry längst
+  weg waren. `panel_custom`-Panels leben nur im Arbeitsspeicher; `async_unload_entry` (läuft
+  auch bei jedem Reload) meldet das Panel bewusst nicht ab, aber bei einer echten Entfernung
+  läuft danach kein Setup mehr, das es neu registrieren würde. Neues `async_remove_entry`
+  meldet das Panel jetzt gezielt bei der tatsächlichen Deinstallation ab.
+
 ## [0.18.5] — 2026-08-01
 
 ### Fixed

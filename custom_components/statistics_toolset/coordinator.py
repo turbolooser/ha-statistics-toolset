@@ -471,7 +471,15 @@ async def simulate(
         )
     tz_name = str(dt_util.DEFAULT_TIME_ZONE)
     rows = await hass.async_add_executor_job(
-        derive_series, reference, cycle, tz_name, null_ts, end_ts, null_ts
+        derive_series,
+        reference,
+        cycle,
+        tz_name,
+        null_ts,
+        end_ts,
+        null_ts,
+        3,
+        [ts for ts, _s in target_sum],
     )
     reference_delta = plausibility_check(rows, reference, end_ts, null_ts, PLAUSI_TOLERANCE)
 
@@ -886,6 +894,14 @@ async def fix(
         for ts, _st, s in await read_statistics(hass, ref_source, start, end)
         if s is not None
     ]
+    # The counter's own existing timestamps, so a gap in the reference (an hour it never
+    # recorded) still gets overwritten instead of silently leaving the old value there —
+    # see derive_series()'s extra_timestamps for why that matters.
+    target_sum = (
+        raw_ref
+        if statistic_id == ref_source
+        else await _read_sum_series_retrying(hass, statistic_id, start, end)
+    )
     # Same clamping as in simulate — the written series must match the previewed one.
     null_ts, end_ts, _warnings = _clamped_start(raw_ref, start, end)
     if max_rate <= 0:
@@ -894,7 +910,15 @@ async def fix(
         build_reference, raw_ref, max_rate, DEFAULT_MEDIAN_RATE
     )
     rows = await hass.async_add_executor_job(
-        derive_series, reference, cycle, str(dt_util.DEFAULT_TIME_ZONE), null_ts, end_ts, null_ts
+        derive_series,
+        reference,
+        cycle,
+        str(dt_util.DEFAULT_TIME_ZONE),
+        null_ts,
+        end_ts,
+        null_ts,
+        3,
+        [ts for ts, _s in target_sum],
     )
     plausibility_check(rows, reference, end_ts, null_ts, PLAUSI_TOLERANCE)
 

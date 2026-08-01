@@ -114,6 +114,34 @@ def test_derive_and_plausibility_daily() -> None:
     plausibility_check(rows, ref, end_ts, start_ts, tolerance=1.0)
 
 
+def test_derive_series_overwrites_a_target_hour_missing_from_the_reference() -> None:
+    """Live bug: a gap in the *reference*'s own recorder history (an hour it never wrote a
+    point for) made derive_series skip that hour entirely — the counter's old, possibly
+    corrupt value at exactly that timestamp survived a fix untouched, even though every
+    neighbouring hour was correctly rebuilt. Reproduced live on a real counter (6 gap hours,
+    each left at its old corrupted value after a fix). Passing the counter's own existing
+    timestamps as ``extra_timestamps`` must fill those hours from the reference's last known
+    value instead of omitting them."""
+    tz = ZoneInfo(BERLIN)
+    start = datetime(2026, 3, 1, 0, 0, tzinfo=tz)
+    start_ts = start.timestamp()
+    raw = _ramp(start_ts, [1.0] * 10)  # 10 hourly points, 1 kWh/h
+    gap_ts = raw[5][0]
+    reference = [row for row in raw if row[0] != gap_ts]  # the reference is missing hour 5
+    end_ts = raw[-1][0]
+
+    target_timestamps = [ts for ts, _val in raw]  # the counter itself has all 10 hours
+    rows = derive_series(
+        reference, "daily", BERLIN, start_ts, end_ts, start_ts, extra_timestamps=target_timestamps
+    )
+    written_ts = {ts for ts, _state, _sum in rows}
+    assert gap_ts in written_ts, "the gap hour must still get a row, not be skipped"
+
+    # Without extra_timestamps, the old (pre-fix) behaviour: the gap hour is simply absent.
+    rows_without = derive_series(reference, "daily", BERLIN, start_ts, end_ts, start_ts)
+    assert gap_ts not in {ts for ts, _state, _sum in rows_without}
+
+
 def test_estimate_max_rate_ignores_extreme_outliers() -> None:
     """The threshold must sit above real consumption but far below a phantom jump."""
     series = _ramp(0.0, [1.0] * 50 + [275000.0] + [1.0] * 50)

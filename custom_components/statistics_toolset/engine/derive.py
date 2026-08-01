@@ -38,6 +38,7 @@ def derive_series(
     end_ts: float,
     null_ts: float,
     round_digits: int = 3,
+    extra_timestamps: Sequence[float] = (),
 ) -> list[Row]:
     """Derive ``(timestamp, state, sum)`` rows for a counter.
 
@@ -49,6 +50,15 @@ def derive_series(
         end_ts: Last timestamp (inclusive) of the range to rebuild.
         null_ts: Zero point for the cumulative ``sum`` (usually the range start).
         round_digits: Decimal places for the written values.
+        extra_timestamps: Timestamps to also emit a row for, beyond the reference's own —
+            normally the counter's *own* existing points. The reference is stepped (last
+            known value carried forward, same rule as ``value_at``), so an hour missing from
+            the reference — a gap in its own recorder history — still gets overwritten
+            instead of silently keeping whatever (possibly corrupt) value already sits
+            there. Without this, a write only ever touches timestamps the reference happens
+            to have, and a source-side gap leaves the old value at that hour untouched even
+            though every neighbouring hour was rebuilt (found live: 6 hours in a real
+            counter's history stayed corrupt after a fix, each one a gap in the source).
     """
     tz = ZoneInfo(tz_name)
     keys = timestamps_of(reference)  # built once; see value_at() on why this matters
@@ -56,10 +66,16 @@ def derive_series(
     if base is None:
         base = reference[0][1] if reference else 0.0
 
+    timestamps = sorted(
+        {ts for ts, _val in reference if start_ts <= ts <= end_ts}
+        | {ts for ts in extra_timestamps if start_ts <= ts <= end_ts}
+    )
+
     rows: list[Row] = []
-    for ts, val in reference:
-        if ts < start_ts or ts > end_ts:
-            continue
+    for ts in timestamps:
+        val = value_at(reference, ts, keys)
+        if val is None:
+            continue  # ts predates the reference entirely — nothing to derive it from
         dt_local = datetime.fromtimestamp(ts, timezone.utc).astimezone(tz)
         reset_ts = cycle_reset(dt_local, cycle).timestamp()
         reset_val = value_at(reference, reset_ts, keys)

@@ -12,7 +12,19 @@ sieht HACS ein Update.
 
 ## [Unreleased]
 
-## [0.18.4] — 2026-07-31
+## [0.18.5] — 2026-08-01
+
+### Fixed
+- Eine Stunde, die in der **Quelle** selbst fehlte (Lücke in deren Recorder-Historie), wurde
+  beim Reparieren stillschweigend übersprungen — der alte, ggf. korrupte Wert des Zählers
+  blieb an genau dieser Stunde unangetastet stehen, während alle Nachbarstunden korrekt neu
+  aufgebaut wurden. Live gefunden: 6 Stunden in einem echten Zähler blieben nach einer
+  Reparatur weiterhin als Ausreißer gemeldet. `derive_series()` schreibt jetzt für jede
+  vorhandene Stunde des Zählers eine Zeile — fehlt sie in der Quelle, wird der letzte
+  bekannte Referenzwert fortgeschrieben, statt die Stunde auszulassen.
+
+Diese Version geht ins besonders sensible Schreiben (`fix`) — vor dem Update ein
+vollständiges Backup anlegen, wie immer.
 
 ### Fixed
 - Der neue Zeit-Indikator ("Working… (Ns)") aus 0.18.3 konnte die fertige Erfolgsmeldung

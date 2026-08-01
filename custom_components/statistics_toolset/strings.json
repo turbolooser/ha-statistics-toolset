@@ -67,11 +67,15 @@
         },
         "start": {
           "name": "Range start",
-          "description": "First moment of the range to rebuild — also the cumulative zero point."
+          "description": "First moment of the range to rebuild — also the cumulative zero point, unless anchor_sum is set."
         },
         "end": {
           "name": "Range end",
           "description": "Last moment of the range to rebuild."
+        },
+        "anchor_sum": {
+          "name": "Anchor sum (optional)",
+          "description": "Continue the rebuilt sum from this value at the range start instead of 0. Use when the counter's real cycle reset predates the reference sensor (e.g. a yearly counter whose reference was only created partway through the year): set this to the counter's own sum at the range start, read from its existing statistics, so the rebuild connects to it instead of truncating everything before."
         },
         "confirm": {
           "name": "I have a backup and reviewed the preview",
@@ -139,11 +143,15 @@
         },
         "start": {
           "name": "Range start",
-          "description": "First moment of the range to rebuild — also the cumulative zero point."
+          "description": "First moment of the range to rebuild — also the cumulative zero point, unless anchor_sum is set."
         },
         "end": {
           "name": "Range end",
           "description": "Last moment of the range to rebuild."
+        },
+        "anchor_sum": {
+          "name": "Anchor sum (optional)",
+          "description": "Continue the rebuilt sum from this value at the range start instead of 0. Use when the counter's real cycle reset predates the reference sensor (e.g. a yearly counter whose reference was only created partway through the year): set this to the counter's own sum at the range start, read from its existing statistics, so the rebuild connects to it instead of truncating everything before."
         }
       }
     },

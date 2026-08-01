@@ -39,6 +39,7 @@ def derive_series(
     null_ts: float,
     round_digits: int = 3,
     extra_timestamps: Sequence[float] = (),
+    anchor_sum: float = 0.0,
 ) -> list[Row]:
     """Derive ``(timestamp, state, sum)`` rows for a counter.
 
@@ -59,6 +60,13 @@ def derive_series(
             to have, and a source-side gap leaves the old value at that hour untouched even
             though every neighbouring hour was rebuilt (found live: 6 hours in a real
             counter's history stayed corrupt after a fix, each one a gap in the source).
+        anchor_sum: Value the cumulative ``sum`` starts from at ``null_ts`` instead of 0.
+            For a counter whose real cycle reset predates the reference series (a clean
+            reference sensor that was only created/corrected partway through the counter's
+            current period), rebuilding from 0 at the reference's start silently truncates
+            everything the counter had already accumulated before that point. Set this to
+            the counter's own last-known-good sum at ``null_ts`` to continue the series
+            instead of restarting it.
     """
     tz = ZoneInfo(tz_name)
     keys = timestamps_of(reference)  # built once; see value_at() on why this matters
@@ -82,7 +90,7 @@ def derive_series(
         if reset_val is None:
             reset_val = base
         state = max(0.0, val - reset_val)
-        cumulative = val - base
+        cumulative = val - base + anchor_sum
         rows.append((ts, round(state, round_digits), round(cumulative, round_digits)))
     return rows
 
@@ -93,12 +101,14 @@ def plausibility_check(
     end_ts: float,
     null_ts: float,
     tolerance: float,
+    anchor_sum: float = 0.0,
 ) -> float:
-    """Assert the derived end sum matches the reference delta; return that delta.
+    """Assert the derived end sum matches the reference delta (plus ``anchor_sum``);
+    return that expected value.
 
     Raises:
         PlausibilityError: If the series is empty, the range is outside the reference,
-            or the end sum deviates from the reference delta by more than ``tolerance``.
+            or the end sum deviates from the expected value by more than ``tolerance``.
     """
     if not rows:
         raise PlausibilityError("Derived series is empty.")
@@ -117,11 +127,12 @@ def plausibility_check(
             f"Requested range {_iso(null_ts)} .. {_iso(end_ts)} lies outside the reference "
             f"series ({span}). Pick a start at or after the reference start."
         )
-    expected = end_val - start_val
+    expected = (end_val - start_val) + anchor_sum
     got = rows[-1][2]
     if abs(got - expected) > tolerance:
         raise PlausibilityError(
-            f"End sum {got:.3f} deviates from reference delta {expected:.3f} "
-            f"(tolerance {tolerance})."
+            f"End sum {got:.3f} deviates from expected {expected:.3f} "
+            f"(reference delta {end_val - start_val:.3f} + anchor {anchor_sum:.3f}, "
+            f"tolerance {tolerance})."
         )
     return expected

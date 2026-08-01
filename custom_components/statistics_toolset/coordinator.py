@@ -412,12 +412,17 @@ async def simulate(
     end: datetime,
     unit: str,
     max_rate: float = 0.0,
+    anchor_sum: float = 0.0,
 ) -> Preview:
     """Analyse a counter and return a preview of the proposed repair. Read-only.
 
     If ``reference_id`` is empty, the counter itself is used as the source ("self mode"):
     only its own outliers are smoothed. Otherwise the trusted source sensor is used for a
     full reconstruction.
+
+    ``anchor_sum`` continues the derived sum from that value at ``start`` instead of 0 —
+    for a counter whose real cycle reset predates the reference series, so the range being
+    rebuilt does not silently truncate the counter's history before the reference existed.
     """
     ref_source = reference_id or statistic_id
     raw_ref = await _read_sum_series_retrying(hass, ref_source, start, end)
@@ -480,8 +485,11 @@ async def simulate(
         null_ts,
         3,
         [ts for ts, _s in target_sum],
+        anchor_sum,
     )
-    reference_delta = plausibility_check(rows, reference, end_ts, null_ts, PLAUSI_TOLERANCE)
+    reference_delta = plausibility_check(
+        rows, reference, end_ts, null_ts, PLAUSI_TOLERANCE, anchor_sum
+    )
 
     proposed_sum = [(ts, summed) for ts, _state, summed in rows]
 
@@ -877,9 +885,15 @@ async def fix(
     unit: str,
     backup_dir: Path,
     max_rate: float = 0.0,
+    anchor_sum: float = 0.0,
 ) -> Preview:
-    """Back up, rebuild and write the corrected series. WRITES (gated by READ_ONLY_MODE)."""
-    preview = await simulate(hass, statistic_id, reference_id, cycle, start, end, unit, max_rate)
+    """Back up, rebuild and write the corrected series. WRITES (gated by READ_ONLY_MODE).
+
+    See :func:`simulate` for ``anchor_sum``.
+    """
+    preview = await simulate(
+        hass, statistic_id, reference_id, cycle, start, end, unit, max_rate, anchor_sum
+    )
 
     # No write without a verified snapshot. Not "a backup was attempted" — the file is read
     # back and its checksum re-computed, because a snapshot that turns out to be unreadable
@@ -919,8 +933,9 @@ async def fix(
         null_ts,
         3,
         [ts for ts, _s in target_sum],
+        anchor_sum,
     )
-    plausibility_check(rows, reference, end_ts, null_ts, PLAUSI_TOLERANCE)
+    plausibility_check(rows, reference, end_ts, null_ts, PLAUSI_TOLERANCE, anchor_sum)
 
     await write_statistics(hass, statistic_id, unit, rows)  # blocked in read-only mode
     _LOGGER.warning(

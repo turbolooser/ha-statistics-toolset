@@ -67,11 +67,15 @@
         },
         "start": {
           "name": "Bereichsstart",
-          "description": "Erster Zeitpunkt des zu reparierenden Bereichs — zugleich der Nullpunkt der Summe."
+          "description": "Erster Zeitpunkt des zu reparierenden Bereichs — zugleich der Nullpunkt der Summe, außer anchor_sum ist gesetzt."
         },
         "end": {
           "name": "Bereichsende",
           "description": "Letzter Zeitpunkt des zu reparierenden Bereichs."
+        },
+        "anchor_sum": {
+          "name": "Anschlusswert (optional)",
+          "description": "Setzt die neu berechnete Summe am Bereichsstart auf diesen Wert fort statt bei 0 neu zu beginnen. Nützlich wenn der echte Zyklus-Reset des Zählers vor der Referenzquelle liegt (z. B. ein Jahres-Zähler, dessen Referenz erst mitten im Jahr angelegt wurde): hier den bisherigen Summenwert des Zählers am Bereichsstart eintragen (aus dessen bestehender Statistik abgelesen), damit die Reparatur nahtlos anschließt statt alles Vorherige zu kappen."
         },
         "confirm": {
           "name": "Ich habe ein Backup und die Vorschau geprüft",
@@ -139,11 +143,15 @@
         },
         "start": {
           "name": "Bereichsstart",
-          "description": "Erster Zeitpunkt des zu reparierenden Bereichs — zugleich der Nullpunkt der Summe."
+          "description": "Erster Zeitpunkt des zu reparierenden Bereichs — zugleich der Nullpunkt der Summe, außer anchor_sum ist gesetzt."
         },
         "end": {
           "name": "Bereichsende",
           "description": "Letzter Zeitpunkt des zu reparierenden Bereichs."
+        },
+        "anchor_sum": {
+          "name": "Anschlusswert (optional)",
+          "description": "Setzt die neu berechnete Summe am Bereichsstart auf diesen Wert fort statt bei 0 neu zu beginnen. Nützlich wenn der echte Zyklus-Reset des Zählers vor der Referenzquelle liegt (z. B. ein Jahres-Zähler, dessen Referenz erst mitten im Jahr angelegt wurde): hier den bisherigen Summenwert des Zählers am Bereichsstart eintragen (aus dessen bestehender Statistik abgelesen), damit die Reparatur nahtlos anschließt statt alles Vorherige zu kappen."
         }
       }
     },

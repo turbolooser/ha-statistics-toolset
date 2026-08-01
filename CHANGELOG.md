@@ -12,6 +12,18 @@ sieht HACS ein Update.
 
 ## [Unreleased]
 
+## [0.18.8] — 2026-08-01
+
+### Added
+- Neues optionales Feld `anchor_sum` bei `simulate`/`fix`: setzt die neu berechnete Summe am
+  Bereichsstart auf diesen Wert fort statt bei 0 neu zu beginnen. Betrifft Zähler, deren
+  echter Zyklus-Reset vor dem Beginn der Referenzquelle liegt (z. B. ein Jahres-Zähler,
+  dessen saubere Referenz erst mitten im Jahr angelegt wurde, weil die Quelle da erst
+  korrigiert wurde) — ohne dieses Feld kappt eine Reparatur ab dem Referenz-Start
+  klammheimlich alles, was der Zähler vorher schon akkumuliert hatte. Live gefunden: ein
+  Jahres-Zähler fiel nach einem Fix von 4778 kWh auf 203 kWh, weil die Referenz erst seit
+  Juli existierte, der Zähler aber seit Januar lief.
+
 ## [0.18.7] — 2026-08-01
 
 ### Fixed

@@ -142,6 +142,40 @@ def test_derive_series_overwrites_a_target_hour_missing_from_the_reference() -> 
     assert gap_ts not in {ts for ts, _state, _sum in rows_without}
 
 
+def test_derive_series_anchor_sum_continues_instead_of_restarting_at_zero() -> None:
+    """Live bug: a counter's real cycle reset (e.g. a yearly total) can predate the clean
+    reference sensor by months (the reference was only created when the source was fixed
+    partway through the year). Rebuilding from the reference's own start with the default
+    zero baseline silently truncates everything the counter had already accumulated before
+    that point — found live on a yearly counter (4778 kWh dropped to 203 kWh). anchor_sum
+    must let the rebuilt range continue from the counter's own pre-existing sum instead."""
+    tz = ZoneInfo(BERLIN)
+    start = datetime(2026, 7, 20, 9, 0, tzinfo=tz)
+    start_ts = start.timestamp()
+    reference = _ramp(start_ts, [1.0] * 10)  # reference only exists from this point on
+    end_ts = reference[-1][0]
+
+    pre_existing_sum = 3645.823  # the counter's own true sum immediately before start_ts
+
+    rows_default = derive_series(reference, "yearly", BERLIN, start_ts, end_ts, start_ts)
+    assert rows_default[0][2] == 0.0, "sanity: default baseline starts at 0"
+    assert rows_default[-1][2] == 9.0  # 10 hourly points of 1 kWh, base subtracted once
+
+    rows_anchored = derive_series(
+        reference, "yearly", BERLIN, start_ts, end_ts, start_ts, anchor_sum=pre_existing_sum
+    )
+    assert rows_anchored[0][2] == pytest.approx(pre_existing_sum)
+    assert rows_anchored[-1][2] == pytest.approx(pre_existing_sum + 9.0), (
+        "must continue from the anchor, not restart the accumulation at 0"
+    )
+
+    # plausibility_check must expect reference_delta + anchor_sum, not just reference_delta.
+    expected = plausibility_check(
+        rows_anchored, reference, end_ts, start_ts, tolerance=0.01, anchor_sum=pre_existing_sum
+    )
+    assert expected == pytest.approx(pre_existing_sum + 9.0)
+
+
 def test_estimate_max_rate_ignores_extreme_outliers() -> None:
     """The threshold must sit above real consumption but far below a phantom jump."""
     series = _ramp(0.0, [1.0] * 50 + [275000.0] + [1.0] * 50)

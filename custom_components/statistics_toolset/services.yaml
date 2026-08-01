@@ -47,6 +47,12 @@ simulate:
       required: true
       selector:
         datetime:
+    anchor_sum:
+      required: false
+      selector:
+        number:
+          mode: box
+          step: "any"
 
 backup:
   fields:
@@ -118,6 +124,12 @@ fix:
       required: true
       selector:
         datetime:
+    anchor_sum:
+      required: false
+      selector:
+        number:
+          mode: box
+          step: "any"
     confirm:
       required: true
       selector:

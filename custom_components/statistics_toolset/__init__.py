@@ -34,6 +34,7 @@ from .const import (
     CONF_END,
     CONF_FROM_STATISTIC_ID,
     CONF_MAX_RATE,
+    CONF_ANCHOR_SUM,
     CONF_REFERENCE_ID,
     CONF_START,
     CONF_STATISTIC_ID,
@@ -106,6 +107,7 @@ _TARGET_FIELDS = {
     vol.Required(CONF_START): cv.datetime,
     vol.Required(CONF_END): cv.datetime,
     vol.Optional(CONF_MAX_RATE, default=0.0): vol.Coerce(float),  # 0 = auto (from data)
+    vol.Optional(CONF_ANCHOR_SUM, default=0.0): vol.Coerce(float),
 }
 
 DETECT_SCHEMA = vol.Schema({vol.Required(CONF_STATISTIC_ID): cv.entity_id})
@@ -208,6 +210,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             call.data[CONF_END],
             _unit_for(hass, call.data[CONF_STATISTIC_ID]),
             call.data[CONF_MAX_RATE],
+            call.data[CONF_ANCHOR_SUM],
         )
         return _preview_response(preview, write_locks(hass)[0])
 
@@ -290,6 +293,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             _unit_for(hass, call.data[CONF_STATISTIC_ID]),
             _backup_dir(hass),
             call.data[CONF_MAX_RATE],
+            call.data[CONF_ANCHOR_SUM],
         )
         return _preview_response(preview, write_locks(hass)[0])
 

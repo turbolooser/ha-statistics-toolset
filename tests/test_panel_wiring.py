@@ -242,6 +242,29 @@ def test_outlier_bars_are_highlighted_in_the_current_chart() -> None:
     )
 
 
+def test_current_and_proposed_charts_share_the_same_period_axis() -> None:
+    """Reported: _svgBars stretches each chart's own bar count to the same pixel width, so
+    if "Current" has 10 periods and "Proposed" has 38 (a repair can extend history further
+    than the reference), bar N is a different calendar period in each chart even though
+    they're drawn one above the other — misleading. _renderResult must align both period
+    arrays onto one shared, sorted label axis (padding a label missing from one side with 0)
+    before handing them to _svgBars, so bar N is always the same period in both charts."""
+    assert "_alignPeriods" in _SOURCE
+
+    align_body = re.search(r"_alignPeriods\(a, b\) \{(.*?)\n  \}", _SOURCE, re.S)
+    assert align_body, "_alignPeriods(a, b) must exist"
+    body = align_body.group(1)
+    assert "Set(" in body, "must union the two label sets, not just concatenate them"
+    assert ".sort()" in body, "the shared axis must be chronologically sorted"
+    assert "?? 0" in body, "a label missing on one side must be padded with 0, not dropped"
+
+    render_body = re.search(r"_renderResult\(r, targetId.*?\) \{(.*?)\n  \}", _SOURCE, re.S).group(1)
+    assert "_alignPeriods(" in render_body, (
+        "_renderResult must run current/proposed periods through _alignPeriods before charting"
+    )
+    assert "currentPeriods" in render_body and "proposedPeriods" in render_body
+
+
 def test_guided_workflow_is_the_default_tab() -> None:
     """Requested: opening/refreshing the dashboard should land on the guided flow, not the
     manual Read/Fix tab."""

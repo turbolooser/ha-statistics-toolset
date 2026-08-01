@@ -12,7 +12,17 @@ sieht HACS ein Update.
 
 ## [Unreleased]
 
-## [0.18.6] — 2026-08-01
+## [0.18.7] — 2026-08-01
+
+### Fixed
+- Die Balkendiagramme "Aktuell" und "Vorschlag" hatten unterschiedliche Zeitskalen, ohne das
+  anzuzeigen: jedes Diagramm streckt seine eigene Anzahl Perioden auf dieselbe Pixelbreite —
+  hat "Aktuell" 10 Perioden und "Vorschlag" 38 (eine Reparatur kann die Historie über die
+  Referenz hinaus verlängern), zeigt Balken Nr. 5 in beiden Diagrammen eine andere
+  Kalenderperiode. Beide Diagramme werden jetzt auf dieselbe, gemeinsame Perioden-Achse
+  ausgerichtet (fehlende Periode auf einer Seite = 0-Balken statt Auslassen).
+
+
 
 ### Fixed
 - Nach dem Deinstallieren blieb das Sidebar-Panel als Geisterleiche im laufenden Prozess

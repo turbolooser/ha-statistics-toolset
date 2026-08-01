@@ -17,5 +17,5 @@
   "issue_tracker": "https://github.com/turbolooser/ha-statistics-toolset/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "0.18.6"
+  "version": "0.18.7"
 }

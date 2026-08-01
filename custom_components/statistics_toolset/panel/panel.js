@@ -1805,6 +1805,23 @@ class StatisticsToolsetPanel extends HTMLElement {
     return this._esc((w && w.message) || "");
   }
 
+  /** Union-aligns two period-value arrays onto the same sorted label axis, padding a
+   *  missing label with 0 rather than dropping it, so the same array index is always the
+   *  same calendar period in both. Without this, _svgBars stretches each chart's own bar
+   *  count to the same pixel width — if "Current" has 10 periods and "Proposed" has 38 (a
+   *  repair can extend history further than the reference), the two charts silently end up
+   *  on two different time scales even though they're drawn one above the other. */
+  _alignPeriods(a, b) {
+    const labels = Array.from(new Set([...a.map((p) => p.label), ...b.map((p) => p.label)])).sort();
+    const toMap = (arr) => new Map(arr.map((p) => [p.label, p.value]));
+    const am = toMap(a);
+    const bm = toMap(b);
+    return [
+      labels.map((label) => ({ label, value: am.get(label) ?? 0 })),
+      labels.map((label) => ({ label, value: bm.get(label) ?? 0 })),
+    ];
+  }
+
   _renderResult(r, targetId = "st-result") {
     const T = this._t;
     const kpi = (label, val) => `<div class="st-kpi">${label}<b>${val}</b></div>`;
@@ -1814,6 +1831,10 @@ class StatisticsToolsetPanel extends HTMLElement {
           .map((w) => this._warningText(w))
           .join("<br>")}</div>`
       : "";
+    const [currentPeriods, proposedPeriods] = this._alignPeriods(
+      r.current_periods || [],
+      r.proposed_periods || []
+    );
     box.innerHTML = `
       <div class="st-card">
         ${notes}
@@ -1833,13 +1854,13 @@ class StatisticsToolsetPanel extends HTMLElement {
       (r.outlier_periods || []).length ? ` <span class="st-tag st-tag-warn">⚠ ${T.outlierMarker}</span>` : ""
     }</div>
         ${this._svgBars(
-          r.current_periods || [],
+          currentPeriods,
           "var(--error-color,#db4437)",
           T.emptyCurrent,
           r.outlier_periods
         )}
         <div class="st-graph-h">${T.proposed}</div>
-        ${this._svgBars(r.proposed_periods || [], "var(--success-color,#43a047)", T.emptyProposed)}
+        ${this._svgBars(proposedPeriods, "var(--success-color,#43a047)", T.emptyProposed)}
       </div>`;
   }
 
